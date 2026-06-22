@@ -36,7 +36,7 @@ const Sidebar = ({ open, onClose }) => {
     <>
       <div className={`fixed inset-0 z-30 bg-slate-950/40 lg:hidden ${open ? "block" : "hidden"}`} onClick={onClose} />
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-72 transform flex-col border-r border-saffron-100 bg-white transition-transform duration-200 lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-72 transform flex-col border-r border-saffron-100 bg-white transition-transform duration-200 dark:bg-[#101112] lg:static lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -65,7 +65,7 @@ const Sidebar = ({ open, onClose }) => {
                 onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition ${
-                    isActive ? "bg-saffron-50 text-saffron-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    isActive ? "bg-saffron-50 text-saffron-700 dark:bg-saffron-500/15 dark:text-saffron-300" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
                   }`
                 }
               >

@@ -2,7 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RoleRoute from "./components/RoleRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/DashboardLive";
 import Departments from "./pages/Departments";
 import Donations from "./pages/Donations";
 import Items from "./pages/Items";

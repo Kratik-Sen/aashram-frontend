@@ -9,22 +9,22 @@ const DataTable = ({ columns, data, loading, emptyTitle, emptyMessage }) => {
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-100 text-sm">
-        <thead className="bg-slate-50">
+    <div className="overflow-x-auto p-2">
+      <table className="dashboard-table min-w-full text-sm">
+        <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column.key} className="whitespace-nowrap px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
+              <th key={column.key} className="whitespace-nowrap border-b border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700">
                 {column.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100 bg-white">
+        <tbody>
           {data.map((row, index) => (
-            <tr key={row._id || index} className="hover:bg-saffron-50/40">
+            <tr key={row._id || index} className="shadow-sm transition">
               {columns.map((column) => (
-                <td key={column.key} className="whitespace-nowrap px-4 py-3 align-middle text-slate-700">
+                <td key={column.key} className="whitespace-nowrap border-y border-slate-100 px-4 py-3 align-middle text-slate-700 first:rounded-l-md first:border-l last:rounded-r-md last:border-r dark:border-slate-800">
                   {column.render ? column.render(row, index) : row[column.key] ?? "-"}
                 </td>
               ))}
