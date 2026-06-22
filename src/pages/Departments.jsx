@@ -8,6 +8,7 @@ import FormInput from "../components/FormInput";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { statusTone } from "../utils/constants";
 import { getErrorMessage, number, shortDate } from "../utils/formatters";
 
@@ -31,21 +32,23 @@ const Departments = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [detailModal, setDetailModal] = useState({ open: false, department: null, issues: [], requests: [] });
 
-  const loadDepartments = async () => {
-    setLoading(true);
+  const loadDepartments = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const { data } = await api.get("/departments", { params: filters });
       setDepartments(data);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadDepartments();
   }, []);
+
+  useRealtimeRefresh(["departments", "issues", "requests"], () => loadDepartments(false));
 
   const handleFilterChange = (event) => setFilters((current) => ({ ...current, [event.target.name]: event.target.value }));
   const handleChange = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));

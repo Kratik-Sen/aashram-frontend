@@ -1,4 +1,4 @@
-import { Gift, Plus, Search } from "lucide-react";
+import { Gift, Images, Plus, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import Badge from "../components/Badge";
@@ -7,6 +7,7 @@ import FormInput from "../components/FormInput";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { categories, managerRoles, units } from "../utils/constants";
 import { getErrorMessage, number, shortDate } from "../utils/formatters";
 
@@ -30,24 +31,27 @@ const Donations = () => {
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
-  const [image, setImage] = useState(null);
+  const [images, setImages] = useState([]);
+  const [imageViewer, setImageViewer] = useState({ open: false, title: "", images: [] });
   const [filters, setFilters] = useState({ category: "", startDate: "", endDate: "" });
 
-  const loadDonations = async () => {
-    setLoading(true);
+  const loadDonations = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const { data } = await api.get("/donations", { params: filters });
       setDonations(data);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadDonations();
   }, []);
+
+  useRealtimeRefresh(["donations"], () => loadDonations(false));
 
   const handleChange = (event) => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
@@ -57,6 +61,15 @@ const Donations = () => {
     setFilters((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
+  const handleImagesChange = (event) => {
+    const selectedImages = Array.from(event.target.files || []);
+    if (selectedImages.length > 3) {
+      showToast("You can upload a maximum of 3 donation images", "error");
+      event.target.value = "";
+    }
+    setImages(selectedImages.slice(0, 3));
+  };
+
   const applyFilters = (event) => {
     event.preventDefault();
     loadDonations();
@@ -64,7 +77,7 @@ const Donations = () => {
 
   const openCreate = () => {
     setForm(emptyForm);
-    setImage(null);
+    setImages([]);
     setModalOpen(true);
   };
 
@@ -74,7 +87,7 @@ const Donations = () => {
     try {
       const payload = new FormData();
       Object.entries(form).forEach(([key, value]) => payload.append(key, value));
-      if (image) payload.append("image", image);
+      images.forEach((image) => payload.append("images", image));
       await api.post("/donations", payload, { headers: { "Content-Type": "multipart/form-data" } });
       showToast("Donation recorded and stock increased", "success");
       setModalOpen(false);
@@ -84,6 +97,20 @@ const Donations = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const getDonationImages = (row) => {
+    if (row.images?.length) return row.images;
+    if (row.image?.url) return [row.image];
+    return [];
+  };
+
+  const openImageViewer = (row) => {
+    setImageViewer({
+      open: true,
+      title: `${row.donorName} donation images`,
+      images: getDonationImages(row)
+    });
   };
 
   const columns = [
@@ -114,7 +141,15 @@ const Donations = () => {
     {
       key: "image",
       header: "Image",
-      render: (row) => row.image?.url ? <a href={row.image.url} target="_blank" rel="noreferrer" className="text-saffron-700 hover:underline">View</a> : "-"
+      render: (row) => {
+        const donationImages = getDonationImages(row);
+        return donationImages.length ? (
+          <button type="button" className="inline-flex items-center gap-1 text-saffron-700 hover:underline" onClick={() => openImageViewer(row)}>
+            <Images className="h-4 w-4" />
+            View
+          </button>
+        ) : "-";
+      }
     }
   ];
 
@@ -170,11 +205,27 @@ const Donations = () => {
           <FormInput label="Unit" name="unit" value={form.unit} onChange={handleChange} options={units} required />
           <FormInput label="Donation Date" name="donationDate" type="date" value={form.donationDate} onChange={handleChange} />
           <label className="block">
-            <span className="field-label">Donation Image</span>
-            <input type="file" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] || null)} className="input-shell mt-1" />
+            <span className="field-label">Donation Images (max 3)</span>
+            <input type="file" accept="image/*" multiple onChange={handleImagesChange} className="input-shell mt-1" />
+            {images.length ? <span className="mt-1 block text-xs font-semibold text-slate-500 dark:text-slate-300">{images.length} image{images.length === 1 ? "" : "s"} selected</span> : null}
           </label>
           <FormInput label="Note" name="note" value={form.note} onChange={handleChange} textarea className="md:col-span-2" />
         </form>
+      </Modal>
+
+      <Modal
+        open={imageViewer.open}
+        title={imageViewer.title || "Donation Images"}
+        onClose={() => setImageViewer({ open: false, title: "", images: [] })}
+        size="max-w-5xl"
+      >
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {imageViewer.images.map((image, index) => (
+            <figure key={image.publicId || image.url || index} className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-[#0d0f10]">
+              <img src={image.url} alt={`Donation ${index + 1}`} className="h-72 w-full object-contain" />
+            </figure>
+          ))}
+        </div>
       </Modal>
     </div>
   );

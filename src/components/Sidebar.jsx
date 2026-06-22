@@ -5,6 +5,7 @@ import {
   Gift,
   Home,
   Package,
+  PackageCheck,
   ReceiptText,
   Send,
   ShieldCheck,
@@ -14,12 +15,15 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useRealtime } from "../context/RealtimeContext";
+import { staffRoles } from "../utils/constants";
 
 const navItems = [
   { label: "Dashboard", path: "/", icon: Home },
   { label: "Items", path: "/items", icon: Package },
   { label: "Purchases", path: "/purchases", icon: ReceiptText, roles: ["Super Admin", "Store Manager", "Viewer"] },
   { label: "Stock Issues", path: "/issues", icon: Send, roles: ["Super Admin", "Store Manager", "Viewer"] },
+  { label: "Issue by Admin", path: "/issue-by-admin", icon: PackageCheck, roles: staffRoles },
   { label: "Donations", path: "/donations", icon: Gift, roles: ["Super Admin", "Store Manager", "Viewer"] },
   { label: "Requests", path: "/requests", icon: ClipboardList },
   { label: "Suppliers", path: "/suppliers", icon: Truck, roles: ["Super Admin", "Store Manager", "Viewer"] },
@@ -30,6 +34,7 @@ const navItems = [
 
 const Sidebar = ({ open, onClose }) => {
   const { user, hasRole } = useAuth();
+  const { notificationCounts, clearNotifications } = useRealtime();
   const visibleItems = navItems.filter((item) => hasRole(item.roles));
 
   return (
@@ -58,11 +63,15 @@ const Sidebar = ({ open, onClose }) => {
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {visibleItems.map((item) => {
             const Icon = item.icon;
+            const notificationCount = notificationCounts[item.path] || 0;
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
-                onClick={onClose}
+                onClick={() => {
+                  clearNotifications(item.path);
+                  onClose();
+                }}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition ${
                     isActive ? "bg-saffron-50 text-saffron-700 dark:bg-saffron-500/15 dark:text-saffron-300" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white"
@@ -70,7 +79,12 @@ const Sidebar = ({ open, onClose }) => {
                 }
               >
                 <Icon className="h-5 w-5" />
-                {item.label}
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                {notificationCount ? (
+                  <span className="ml-auto flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">
+                    {notificationCount > 99 ? "99+" : notificationCount}
+                  </span>
+                ) : null}
               </NavLink>
             );
           })}

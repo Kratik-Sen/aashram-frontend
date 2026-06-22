@@ -30,9 +30,9 @@ import DataTable from "../components/DataTable";
 import Modal from "../components/Modal";
 import Spinner from "../components/Spinner";
 import StatCard from "../components/StatCard";
-import { useRealtime } from "../context/RealtimeContext";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { currency, getErrorMessage, number, shortDate } from "../utils/formatters";
 
 const chartColors = ["#ff7a18", "#16a34a", "#3b82f6", "#eab308", "#14b8a6", "#ef4444", "#a855f7"];
@@ -40,7 +40,6 @@ const purchasePeriods = ["daily", "weekly", "monthly", "yearly"];
 
 const DashboardLive = () => {
   const { showToast } = useToast();
-  const { lastEvent } = useRealtime();
   const { isDark } = useTheme();
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -63,9 +62,7 @@ const DashboardLive = () => {
     loadDashboard();
   }, [purchasePeriod]);
 
-  useEffect(() => {
-    if (lastEvent) loadDashboard(false);
-  }, [lastEvent]);
+  useRealtimeRefresh(["dashboard", "items", "stock", "purchases", "issues", "donations", "requests", "suppliers", "departments"], () => loadDashboard(false));
 
   const openMetric = async (metric) => {
     setDetailModal({ open: true, metric, title: "Loading", rows: [], loading: true });

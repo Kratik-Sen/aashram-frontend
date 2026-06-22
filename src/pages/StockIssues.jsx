@@ -7,6 +7,7 @@ import FormInput from "../components/FormInput";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { managerRoles } from "../utils/constants";
 import { getErrorMessage, number, shortDate } from "../utils/formatters";
 
@@ -32,8 +33,8 @@ const StockIssues = () => {
   const [form, setForm] = useState(emptyForm);
   const [filters, setFilters] = useState({ itemId: "", departmentId: "", startDate: "", endDate: "" });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const [issueRes, itemRes, departmentRes] = await Promise.all([
         api.get("/issues", { params: filters }),
@@ -46,13 +47,15 @@ const StockIssues = () => {
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useRealtimeRefresh(["issues", "items", "departments"], () => loadData(false));
 
   const itemOptions = items.map((item) => ({ value: item._id, label: `${item.itemName} (${item.currentStock} ${item.unit})` }));
   const departmentOptions = departments.map((department) => ({ value: department._id, label: department.name }));
@@ -109,7 +112,7 @@ const StockIssues = () => {
     },
     { key: "department", header: "Department", render: (row) => row.issuedToDepartment?.name },
     { key: "quantity", header: "Qty", render: (row) => `${number(row.quantity)} ${row.itemId?.unit || ""}` },
-    { key: "purpose", header: "Purpose" },
+    { key: "purpose", header: "Purpose", wrap: true, cellClassName: "min-w-56" },
     { key: "issuedBy", header: "Issued By", render: (row) => row.issuedBy?.name },
     { key: "issueDate", header: "Date", render: (row) => shortDate(row.issueDate) },
     { key: "status", header: "Movement", render: () => <Badge value="OUT">OUT</Badge> }

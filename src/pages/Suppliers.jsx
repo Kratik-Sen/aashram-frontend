@@ -8,6 +8,7 @@ import FormInput from "../components/FormInput";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { managerRoles, statusTone } from "../utils/constants";
 import { currency, getErrorMessage, number, shortDate } from "../utils/formatters";
 
@@ -35,21 +36,23 @@ const Suppliers = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [historyModal, setHistoryModal] = useState({ open: false, supplier: null, purchases: [] });
 
-  const loadSuppliers = async () => {
-    setLoading(true);
+  const loadSuppliers = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const { data } = await api.get("/suppliers", { params: filters });
       setSuppliers(data);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadSuppliers();
   }, []);
+
+  useRealtimeRefresh(["suppliers"], () => loadSuppliers(false));
 
   const handleFilterChange = (event) => setFilters((current) => ({ ...current, [event.target.name]: event.target.value }));
   const handleChange = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));

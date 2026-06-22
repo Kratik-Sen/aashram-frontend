@@ -7,6 +7,7 @@ import DataTable from "../components/DataTable";
 import FormInput from "../components/FormInput";
 import Modal from "../components/Modal";
 import { useToast } from "../context/ToastContext";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { roles, statusTone } from "../utils/constants";
 import { getErrorMessage, shortDate } from "../utils/formatters";
 
@@ -31,8 +32,8 @@ const Users = () => {
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const [userRes, departmentRes] = await Promise.all([
         api.get("/users", { params: filters }),
@@ -43,13 +44,15 @@ const Users = () => {
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useRealtimeRefresh(["users", "departments"], () => loadData(false));
 
   const departmentOptions = departments.map((department) => ({ value: department._id, label: department.name }));
 

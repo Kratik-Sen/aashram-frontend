@@ -5,6 +5,7 @@ import api from "../api/axios";
 import Badge from "../components/Badge";
 import DataTable from "../components/DataTable";
 import { useToast } from "../context/ToastContext";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { categories } from "../utils/constants";
 import { downloadCsv } from "../utils/csv";
 import { currency, getErrorMessage, number, shortDate } from "../utils/formatters";
@@ -55,21 +56,23 @@ const Reports = () => {
     loadLookups();
   }, [showToast]);
 
-  const loadReport = async () => {
-    setLoading(true);
+  const loadReport = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const { data } = await api.get(`/reports/${reportType}`, { params: filters });
       setRows(data);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadReport();
   }, [reportType]);
+
+  useRealtimeRefresh(["reports", "items", "stock", "purchases", "issues", "donations", "requests", "suppliers", "departments"], () => loadReport(false));
 
   const itemOptions = items.map((item) => ({ value: item._id, label: item.itemName }));
   const supplierOptions = suppliers.map((supplier) => ({ value: supplier._id, label: supplier.supplierName }));

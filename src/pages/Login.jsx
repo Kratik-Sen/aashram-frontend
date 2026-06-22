@@ -11,7 +11,7 @@ const Login = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ email: "admin@aashram.com", password: "admin123" });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
 
   if (user) return <Navigate to="/" replace />;
@@ -89,10 +89,6 @@ const Login = () => {
             </button>
           </form>
 
-          <div className="mt-5 rounded-md bg-saffron-50 p-3 text-sm text-saffron-800">
-            <p className="font-semibold">Default admin</p>
-            <p>admin@aashram.com / admin123</p>
-          </div>
         </div>
       </section>
     </main>

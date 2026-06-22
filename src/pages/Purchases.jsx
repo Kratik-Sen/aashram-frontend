@@ -6,6 +6,7 @@ import FormInput from "../components/FormInput";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { managerRoles } from "../utils/constants";
 import { currency, getErrorMessage, number, shortDate } from "../utils/formatters";
 
@@ -33,8 +34,8 @@ const Purchases = () => {
   const [billImage, setBillImage] = useState(null);
   const [filters, setFilters] = useState({ itemId: "", supplierId: "", startDate: "", endDate: "" });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const [purchaseRes, itemRes, supplierRes] = await Promise.all([
         api.get("/purchases", { params: filters }),
@@ -47,13 +48,15 @@ const Purchases = () => {
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useRealtimeRefresh(["purchases", "items"], () => loadData(false));
 
   const itemOptions = items.map((item) => ({ value: item._id, label: `${item.itemName} (${item.unit})` }));
   const supplierOptions = suppliers.map((supplier) => ({ value: supplier._id, label: supplier.supplierName }));
@@ -181,10 +184,10 @@ const Purchases = () => {
             <span className="field-label">Bill Image</span>
             <input type="file" accept="image/*" onChange={(event) => setBillImage(event.target.files?.[0] || null)} className="input-shell mt-1" />
           </label>
-          <div className="rounded-md border border-saffron-100 bg-saffron-50 p-3 text-sm">
-            <p className="font-semibold text-saffron-800">Calculated total</p>
-            <p className="mt-1 text-lg font-bold text-slate-900">{currency(totalPrice)}</p>
-            {selectedItem ? <p className="text-xs text-slate-500">Current stock: {number(selectedItem.currentStock)} {selectedItem.unit}</p> : null}
+          <div className="rounded-md border border-saffron-100 bg-saffron-50 p-3 text-sm dark:border-saffron-500/40 dark:bg-[#181512]">
+            <p className="font-semibold text-saffron-800 dark:text-saffron-200">Calculated total</p>
+            <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{currency(totalPrice)}</p>
+            {selectedItem ? <p className="text-xs text-slate-500 dark:text-slate-300">Current stock: {number(selectedItem.currentStock)} {selectedItem.unit}</p> : null}
           </div>
           <FormInput label="Note" name="note" value={form.note} onChange={handleChange} textarea className="md:col-span-2" />
         </form>

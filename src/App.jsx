@@ -5,6 +5,7 @@ import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./pages/DashboardLive";
 import Departments from "./pages/Departments";
 import Donations from "./pages/Donations";
+import IssuedByAdmin from "./pages/IssuedByAdmin";
 import Items from "./pages/Items";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -14,6 +15,7 @@ import Requests from "./pages/Requests";
 import StockIssues from "./pages/StockIssues";
 import Suppliers from "./pages/Suppliers";
 import Users from "./pages/Users";
+import { staffRoles } from "./utils/constants";
 
 const App = () => (
   <Routes>
@@ -24,6 +26,9 @@ const App = () => (
         <Route path="items" element={<Items />} />
         <Route path="purchases" element={<Purchases />} />
         <Route path="issues" element={<StockIssues />} />
+        <Route element={<RoleRoute roles={staffRoles} />}>
+          <Route path="issue-by-admin" element={<IssuedByAdmin />} />
+        </Route>
         <Route path="donations" element={<Donations />} />
         <Route path="requests" element={<Requests />} />
         <Route path="suppliers" element={<Suppliers />} />

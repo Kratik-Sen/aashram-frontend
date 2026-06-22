@@ -7,6 +7,7 @@ import FormInput from "../components/FormInput";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { managerRoles, statusTone } from "../utils/constants";
 import { getErrorMessage, number, shortDate } from "../utils/formatters";
 
@@ -32,8 +33,8 @@ const Requests = () => {
   const [form, setForm] = useState(emptyForm);
   const [filters, setFilters] = useState({ status: "", departmentId: "" });
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const [requestRes, itemRes, departmentRes] = await Promise.all([
         api.get("/requests", { params: filters }),
@@ -46,13 +47,15 @@ const Requests = () => {
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useRealtimeRefresh(["requests", "items", "departments"], () => loadData(false));
 
   const itemOptions = items.map((item) => ({ value: item._id, label: `${item.itemName} (${item.currentStock} ${item.unit})` }));
   const departmentOptions = departments.map((department) => ({ value: department._id, label: department.name }));
@@ -122,7 +125,7 @@ const Requests = () => {
     { key: "quantity", header: "Qty", render: (row) => `${number(row.quantity)} ${row.itemId?.unit || ""}` },
     { key: "department", header: "Department", render: (row) => row.department?.name },
     { key: "requestedBy", header: "Requested By", render: (row) => row.requestedBy?.name },
-    { key: "reason", header: "Reason" },
+    { key: "reason", header: "Reason", wrap: true, cellClassName: "min-w-64" },
     { key: "status", header: "Status", render: (row) => <Badge tone={statusTone[row.status]}>{row.status}</Badge> },
     { key: "createdAt", header: "Date", render: (row) => shortDate(row.createdAt) },
     {

@@ -8,6 +8,7 @@ import FormInput from "../components/FormInput";
 import Modal from "../components/Modal";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { categories, managerRoles, statusTone, units } from "../utils/constants";
 import { getErrorMessage, number, shortDate } from "../utils/formatters";
 
@@ -37,21 +38,23 @@ const Items = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [historyModal, setHistoryModal] = useState({ open: false, item: null, transactions: [] });
 
-  const loadItems = async () => {
-    setLoading(true);
+  const loadItems = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const { data } = await api.get("/items", { params: filters });
       setItems(data);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadItems();
   }, []);
+
+  useRealtimeRefresh(["items", "stock"], () => loadItems(false));
 
   const filteredItems = useMemo(() => items, [items]);
 
