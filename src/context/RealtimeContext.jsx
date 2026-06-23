@@ -2,15 +2,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
 import notificationSound from "../assets/notification.mp3";
+import { getSocketBaseUrl } from "../api/baseUrl";
 import { useAuth } from "./AuthContext";
 import { eventTouchesAreas, getEventAreas, notificationAreasByPath } from "../utils/realtime";
 
 const RealtimeContext = createContext(null);
-
-const socketUrl = () => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
-  return baseUrl.replace(/\/api\/?$/, "");
-};
 
 export const RealtimeProvider = ({ children }) => {
   const { user } = useAuth();
@@ -48,7 +44,7 @@ export const RealtimeProvider = ({ children }) => {
       return undefined;
     }
 
-    const socket = io(socketUrl(), {
+    const socket = io(getSocketBaseUrl(), {
       transports: ["websocket", "polling"]
     });
 
