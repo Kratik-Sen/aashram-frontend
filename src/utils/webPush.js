@@ -70,6 +70,11 @@ export const enableWebPushNotifications = async () => {
   }
 
   await api.post("/notifications/subscribe", subscription.toJSON());
+  await registration.showNotification("Notifications enabled", {
+    body: "You will receive Aashram Inventory alerts on this device.",
+    tag: "aashram-notifications-enabled",
+    data: { url: "/" }
+  });
   setWebPushPreference(true);
   return true;
 };
