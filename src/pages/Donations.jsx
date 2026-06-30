@@ -235,9 +235,9 @@ const Donations = () => {
         onClose={() => setImageViewer({ open: false, title: "", images: [] })}
         size="max-w-5xl"
       >
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-wrap justify-center gap-4">
           {imageViewer.images.map((image, index) => (
-            <figure key={image.publicId || image.url || index} className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-[#0d0f10]">
+            <figure key={image.publicId || image.url || index} className="w-full max-w-sm overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-[#0d0f10]">
               <img src={image.url} alt={`Donation ${index + 1}`} className="h-72 w-full object-contain" />
             </figure>
           ))}

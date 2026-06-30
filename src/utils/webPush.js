@@ -29,6 +29,8 @@ const registerServiceWorker = async () => {
   return navigator.serviceWorker.ready;
 };
 
+const areaLabel = (area = "dashboard") => area.charAt(0).toUpperCase() + area.slice(1);
+
 export const getWebPushStatus = async () => {
   if (!isWebPushSupported()) {
     return { supported: false, enabled: false, permission: "unsupported" };
@@ -76,6 +78,33 @@ export const enableWebPushNotifications = async () => {
     data: { url: "/" }
   });
   setWebPushPreference(true);
+  return true;
+};
+
+export const showBrowserNotification = async (event = {}) => {
+  if (!("Notification" in window) || window.Notification.permission !== "granted") return false;
+
+  const title = event.title || "Aashram Inventory updated";
+  const body = event.body || `${areaLabel(event.area)} ${event.action || "updated"}`;
+  const options = {
+    body,
+    tag: event.id || `aashram-${event.area || "inventory"}`,
+    renotify: true,
+    requireInteraction: false,
+    data: { url: event.url || "/" }
+  };
+
+  if ("serviceWorker" in navigator) {
+    const registration = await navigator.serviceWorker.getRegistration().then((existing) => existing || registerServiceWorker());
+    await registration.showNotification(title, options);
+    return true;
+  }
+
+  const notification = new window.Notification(title, options);
+  notification.onclick = () => {
+    window.focus();
+    window.location.assign(options.data.url);
+  };
   return true;
 };
 

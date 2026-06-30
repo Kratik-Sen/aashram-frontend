@@ -6,7 +6,7 @@ import { getSocketBaseUrl } from "../api/baseUrl";
 import { useAuth } from "./AuthContext";
 import { useToast } from "./ToastContext";
 import { eventTouchesAreas, getEventAreas, notificationAreasByPath } from "../utils/realtime";
-import { ensurePreferredWebPushNotifications } from "../utils/webPush";
+import { ensurePreferredWebPushNotifications, showBrowserNotification } from "../utils/webPush";
 
 const RealtimeContext = createContext(null);
 
@@ -77,6 +77,7 @@ export const RealtimeProvider = ({ children }) => {
         return next;
       });
       playNotification();
+      showBrowserNotification(event).catch(() => {});
     });
 
     return () => socket.disconnect();

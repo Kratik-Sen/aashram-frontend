@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { cloneElement, isValidElement, useMemo } from "react";
 import { usePageSearch } from "../context/PageSearchContext";
+import { translateContent, useLanguage } from "../context/LanguageContext";
 import EmptyState from "./EmptyState";
 import Spinner from "./Spinner";
 
@@ -16,6 +17,31 @@ const flattenSearchValue = (value, seen = new WeakSet()) => {
   return "";
 };
 
+const shouldTranslateProp = (key) => ["aria-label", "title", "placeholder", "alt"].includes(key);
+
+const translateNode = (node, language) => {
+  if (node === null || node === undefined || typeof node === "boolean") return node;
+  if (typeof node === "string") return translateContent(node, language);
+  if (typeof node === "number") return node;
+  if (Array.isArray(node)) return node.map((child) => translateNode(child, language));
+  if (!isValidElement(node)) return node;
+
+  if (node.props?.["data-no-translate"]) return node;
+
+  const nextProps = {};
+  Object.entries(node.props || {}).forEach(([key, value]) => {
+    if (shouldTranslateProp(key) && typeof value === "string") {
+      nextProps[key] = translateContent(value, language);
+    }
+  });
+
+  if (node.props?.children !== undefined) {
+    nextProps.children = translateNode(node.props.children, language);
+  }
+
+  return Object.keys(nextProps).length ? cloneElement(node, nextProps) : node;
+};
+
 const DataTable = ({
   columns,
   data,
@@ -28,6 +54,7 @@ const DataTable = ({
   onLoadMore
 }) => {
   const { searchTerm } = usePageSearch();
+  const { language } = useLanguage();
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const rows = useMemo(() => {
     if (!normalizedSearch || searchDisabled) return data || [];
@@ -39,8 +66,8 @@ const DataTable = ({
   if (!rows.length) {
     return (
       <EmptyState
-        title={normalizedSearch && !searchDisabled ? "No matching records" : emptyTitle}
-        message={normalizedSearch && !searchDisabled ? "Try a different search term or clear the search field." : emptyMessage}
+        title={translateContent(normalizedSearch && !searchDisabled ? "No matching records" : emptyTitle, language)}
+        message={translateContent(normalizedSearch && !searchDisabled ? "Try a different search term or clear the search field." : emptyMessage, language)}
       />
     );
   }
@@ -53,7 +80,7 @@ const DataTable = ({
             <tr>
               {columns.map((column) => (
                 <th key={column.key} className="whitespace-nowrap border-b border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700">
-                  {column.header}
+                  {translateContent(column.header, language)}
                 </th>
               ))}
             </tr>
@@ -68,7 +95,7 @@ const DataTable = ({
                       column.wrap ? "max-w-xs whitespace-normal break-words leading-6" : "whitespace-nowrap"
                     } ${column.cellClassName || ""}`}
                   >
-                    {column.render ? column.render(row, index) : row[column.key] ?? "-"}
+                    {translateNode(column.render ? column.render(row, index) : row[column.key] ?? "-", language)}
                   </td>
                 ))}
               </tr>
@@ -79,11 +106,11 @@ const DataTable = ({
       {pagination ? (
         <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            Showing {Math.min(data?.length || 0, pagination.total || data?.length || 0)} of {pagination.total || data?.length || 0}
+            {translateContent("Showing", language)} {Math.min(data?.length || 0, pagination.total || data?.length || 0)} {translateContent("of", language)} {pagination.total || data?.length || 0}
           </span>
           {pagination.hasMore ? (
             <button type="button" className="btn-secondary" onClick={onLoadMore} disabled={loadingMore}>
-              {loadingMore ? "Loading..." : "Load more"}
+              {translateContent(loadingMore ? "Loading..." : "Load more", language)}
             </button>
           ) : null}
         </div>

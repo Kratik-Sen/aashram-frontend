@@ -2,6 +2,7 @@ import { LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import FormInput from "../components/FormInput";
+import LanguageToggle from "../components/LanguageToggle";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { getErrorMessage } from "../utils/formatters";
@@ -36,6 +37,9 @@ const Login = () => {
 
   return (
     <main className="grid min-h-screen bg-ashram-cream lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="absolute right-4 top-4 z-10">
+        <LanguageToggle />
+      </div>
       <section className="relative hidden overflow-hidden bg-ashram-charcoal lg:block">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(242,126,12,0.22),transparent_28%),radial-gradient(circle_at_80%_30%,rgba(47,111,78,0.28),transparent_30%)]" />
         <div className="relative flex h-full flex-col justify-between p-12 text-white">

@@ -96,7 +96,6 @@ const Users = () => {
       if (editingUser) {
         const payload = { ...form };
         if (!payload.password) delete payload.password;
-        delete payload.email;
         await api.put(`/users/${editingUser._id}`, payload);
         showToast("User updated", "success");
       } else {
@@ -209,7 +208,7 @@ const Users = () => {
       >
         <form id="user-form" className="grid gap-4 md:grid-cols-2" onSubmit={submitUser}>
           <FormInput label="Name" name="name" value={form.name} onChange={handleChange} required />
-          <FormInput label="Email" name="email" type="email" value={form.email} onChange={handleChange} required disabled={Boolean(editingUser)} />
+          <FormInput label="Email" name="email" type="email" value={form.email} onChange={handleChange} required />
           <FormInput label={editingUser ? "New Password" : "Password"} name="password" type="password" value={form.password} onChange={handleChange} required={!editingUser} />
           <FormInput label="Role" name="role" value={form.role} onChange={handleChange} options={roles} required />
           <FormInput label="Department" name="department" value={form.department} onChange={handleChange} options={departmentOptions} />

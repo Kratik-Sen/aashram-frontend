@@ -1,3 +1,57 @@
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open("aashram-app-shell-v1").then((cache) => cache.addAll(["/", "/index.html"]))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(
+      keys
+        .filter((key) => !["aashram-app-shell-v1", "aashram-runtime-v1"].includes(key))
+        .map((key) => caches.delete(key))
+    ))
+  );
+  self.clients.claim();
+});
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open("aashram-app-shell-v1").then((cache) => cache.put("/index.html", copy));
+          return response;
+        })
+        .catch(() => caches.match("/index.html"))
+    );
+    return;
+  }
+
+  event.respondWith(
+    caches.open("aashram-runtime-v1").then((cache) => (
+      cache.match(request).then((cached) => {
+        const network = fetch(request)
+          .then((response) => {
+            if (response.ok) cache.put(request, response.clone());
+            return response;
+          })
+          .catch(() => cached);
+
+        return cached || network;
+      })
+    ))
+  );
+});
+
 self.addEventListener("push", (event) => {
   let payload = {
     title: "Aashram Inventory updated",
@@ -17,7 +71,12 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(payload.title, {
       body: payload.body,
       tag: payload.tag || "aashram-inventory",
-      data: { url: payload.url || "/" }
+      renotify: true,
+      requireInteraction: false,
+      data: { url: payload.url || "/" },
+      actions: [
+        { action: "open", title: "Open" }
+      ]
     })
   );
 });

@@ -8,6 +8,7 @@ import { useRealtime } from "../context/RealtimeContext";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../context/ToastContext";
 import { disableWebPushNotifications, enableWebPushNotifications, getWebPushStatus } from "../utils/webPush";
+import LanguageToggle from "./LanguageToggle";
 
 const titles = {
   "/": "Dashboard",
@@ -105,6 +106,7 @@ const Navbar = ({ onMenu }) => {
         </label>
 
         <div className="flex items-center gap-3">
+          <LanguageToggle compact />
           <span className={`hidden items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-bold md:inline-flex ${connected ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300"}`}>
             {connected ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
             Live
