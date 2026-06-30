@@ -16,7 +16,17 @@ const flattenSearchValue = (value, seen = new WeakSet()) => {
   return "";
 };
 
-const DataTable = ({ columns, data, loading, emptyTitle, emptyMessage, searchDisabled = false }) => {
+const DataTable = ({
+  columns,
+  data,
+  loading,
+  emptyTitle,
+  emptyMessage,
+  searchDisabled = false,
+  pagination,
+  loadingMore = false,
+  onLoadMore
+}) => {
   const { searchTerm } = usePageSearch();
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const rows = useMemo(() => {
@@ -36,35 +46,49 @@ const DataTable = ({ columns, data, loading, emptyTitle, emptyMessage, searchDis
   }
 
   return (
-    <div className="overflow-x-auto p-2">
-      <table className="dashboard-table min-w-full text-sm">
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key} className="whitespace-nowrap border-b border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700">
-                {column.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr key={row._id || index} className="shadow-sm transition">
+    <>
+      <div className="overflow-x-auto p-2">
+        <table className="dashboard-table min-w-full text-sm">
+          <thead>
+            <tr>
               {columns.map((column) => (
-                <td
-                  key={column.key}
-                  className={`border-y border-slate-100 px-4 py-3 align-middle text-slate-700 first:rounded-l-md first:border-l last:rounded-r-md last:border-r dark:border-slate-800 ${
-                    column.wrap ? "max-w-xs whitespace-normal break-words leading-6" : "whitespace-nowrap"
-                  } ${column.cellClassName || ""}`}
-                >
-                  {column.render ? column.render(row, index) : row[column.key] ?? "-"}
-                </td>
+                <th key={column.key} className="whitespace-nowrap border-b border-slate-200 px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500 dark:border-slate-700">
+                  {column.header}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={row._id || index} className="shadow-sm transition">
+                {columns.map((column) => (
+                  <td
+                    key={column.key}
+                    className={`border-y border-slate-100 px-4 py-3 align-middle text-slate-700 first:rounded-l-md first:border-l last:rounded-r-md last:border-r dark:border-slate-800 ${
+                      column.wrap ? "max-w-xs whitespace-normal break-words leading-6" : "whitespace-nowrap"
+                    } ${column.cellClassName || ""}`}
+                  >
+                    {column.render ? column.render(row, index) : row[column.key] ?? "-"}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {pagination ? (
+        <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            Showing {Math.min(data?.length || 0, pagination.total || data?.length || 0)} of {pagination.total || data?.length || 0}
+          </span>
+          {pagination.hasMore ? (
+            <button type="button" className="btn-secondary" onClick={onLoadMore} disabled={loadingMore}>
+              {loadingMore ? "Loading..." : "Load more"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </>
   );
 };
 

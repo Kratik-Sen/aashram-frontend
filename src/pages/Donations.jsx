@@ -10,6 +10,7 @@ import { useToast } from "../context/ToastContext";
 import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { categories, managerRoles, units } from "../utils/constants";
 import { getErrorMessage, number, shortDate } from "../utils/formatters";
+import { unpackPaginatedResponse, withPagination } from "../utils/pagination";
 
 const emptyForm = {
   donorName: "",
@@ -28,6 +29,8 @@ const Donations = () => {
   const canManage = hasRole(managerRoles);
   const [donations, setDonations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState(null);
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -35,15 +38,19 @@ const Donations = () => {
   const [imageViewer, setImageViewer] = useState({ open: false, title: "", images: [] });
   const [filters, setFilters] = useState({ category: "", startDate: "", endDate: "" });
 
-  const loadDonations = async (showLoader = true) => {
-    if (showLoader) setLoading(true);
+  const loadDonations = async (showLoader = true, page = 1, append = false) => {
+    if (append) setLoadingMore(true);
+    else if (showLoader) setLoading(true);
     try {
-      const { data } = await api.get("/donations", { params: filters });
-      setDonations(data);
+      const { data } = await api.get("/donations", { params: withPagination(filters, page) });
+      const { rows, pagination: nextPagination } = unpackPaginatedResponse(data);
+      setDonations((current) => append ? [...current, ...rows] : rows);
+      setPagination(nextPagination);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      if (showLoader) setLoading(false);
+      if (append) setLoadingMore(false);
+      else if (showLoader) setLoading(false);
     }
   };
 
@@ -179,7 +186,16 @@ const Donations = () => {
       </div>
 
       <section className="panel overflow-hidden">
-        <DataTable columns={columns} data={donations} loading={loading} emptyTitle="No donations found" emptyMessage="Record donations or adjust filters." />
+        <DataTable
+          columns={columns}
+          data={donations}
+          loading={loading}
+          emptyTitle="No donations found"
+          emptyMessage="Record donations or adjust filters."
+          pagination={pagination}
+          loadingMore={loadingMore}
+          onLoadMore={() => loadDonations(false, (pagination?.page || 1) + 1, true)}
+        />
       </section>
 
       <Modal

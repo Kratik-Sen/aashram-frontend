@@ -10,6 +10,7 @@ import { useToast } from "../context/ToastContext";
 import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { managerRoles, statusTone } from "../utils/constants";
 import { getErrorMessage, number, shortDate } from "../utils/formatters";
+import { unpackPaginatedResponse, withPagination } from "../utils/pagination";
 
 const emptyForm = {
   itemId: "",
@@ -28,26 +29,32 @@ const Requests = () => {
   const [items, setItems] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState(null);
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [filters, setFilters] = useState({ status: "", departmentId: "" });
 
-  const loadData = async (showLoader = true) => {
-    if (showLoader) setLoading(true);
+  const loadData = async (showLoader = true, page = 1, append = false) => {
+    if (append) setLoadingMore(true);
+    else if (showLoader) setLoading(true);
     try {
       const [requestRes, itemRes, departmentRes] = await Promise.all([
-        api.get("/requests", { params: filters }),
+        api.get("/requests", { params: withPagination(filters, page) }),
         api.get("/items", { params: { status: "active" } }),
         api.get("/departments", { params: { status: "active" } })
       ]);
-      setRequests(requestRes.data);
+      const { rows, pagination: nextPagination } = unpackPaginatedResponse(requestRes.data);
+      setRequests((current) => append ? [...current, ...rows] : rows);
+      setPagination(nextPagination);
       setItems(itemRes.data);
       setDepartments(departmentRes.data);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      if (showLoader) setLoading(false);
+      if (append) setLoadingMore(false);
+      else if (showLoader) setLoading(false);
     }
   };
 
@@ -181,7 +188,16 @@ const Requests = () => {
       </div>
 
       <section className="panel overflow-hidden">
-        <DataTable columns={columns} data={requests} loading={loading} emptyTitle="No requests found" emptyMessage="Create a request or change filters." />
+        <DataTable
+          columns={columns}
+          data={requests}
+          loading={loading}
+          emptyTitle="No requests found"
+          emptyMessage="Create a request or change filters."
+          pagination={pagination}
+          loadingMore={loadingMore}
+          onLoadMore={() => loadData(false, (pagination?.page || 1) + 1, true)}
+        />
       </section>
 
       <Modal

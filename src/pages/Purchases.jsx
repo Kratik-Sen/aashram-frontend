@@ -9,6 +9,7 @@ import { useToast } from "../context/ToastContext";
 import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { managerRoles } from "../utils/constants";
 import { currency, getErrorMessage, number, shortDate } from "../utils/formatters";
+import { unpackPaginatedResponse, withPagination } from "../utils/pagination";
 
 const emptyForm = {
   itemId: "",
@@ -28,27 +29,33 @@ const Purchases = () => {
   const [items, setItems] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState(null);
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [billImage, setBillImage] = useState(null);
   const [filters, setFilters] = useState({ itemId: "", supplierId: "", startDate: "", endDate: "" });
 
-  const loadData = async (showLoader = true) => {
-    if (showLoader) setLoading(true);
+  const loadData = async (showLoader = true, page = 1, append = false) => {
+    if (append) setLoadingMore(true);
+    else if (showLoader) setLoading(true);
     try {
       const [purchaseRes, itemRes, supplierRes] = await Promise.all([
-        api.get("/purchases", { params: filters }),
+        api.get("/purchases", { params: withPagination(filters, page) }),
         api.get("/items", { params: { status: "active" } }),
         api.get("/suppliers", { params: { status: "active" } })
       ]);
-      setPurchases(purchaseRes.data);
+      const { rows, pagination: nextPagination } = unpackPaginatedResponse(purchaseRes.data);
+      setPurchases((current) => append ? [...current, ...rows] : rows);
+      setPagination(nextPagination);
       setItems(itemRes.data);
       setSuppliers(supplierRes.data);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      if (showLoader) setLoading(false);
+      if (append) setLoadingMore(false);
+      else if (showLoader) setLoading(false);
     }
   };
 
@@ -159,7 +166,16 @@ const Purchases = () => {
       </div>
 
       <section className="panel overflow-hidden">
-        <DataTable columns={columns} data={purchases} loading={loading} emptyTitle="No purchases found" emptyMessage="Add a purchase or adjust filters." />
+        <DataTable
+          columns={columns}
+          data={purchases}
+          loading={loading}
+          emptyTitle="No purchases found"
+          emptyMessage="Add a purchase or adjust filters."
+          pagination={pagination}
+          loadingMore={loadingMore}
+          onLoadMore={() => loadData(false, (pagination?.page || 1) + 1, true)}
+        />
       </section>
 
       <Modal

@@ -11,6 +11,7 @@ import { useToast } from "../context/ToastContext";
 import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { statusTone } from "../utils/constants";
 import { getErrorMessage, number, shortDate } from "../utils/formatters";
+import { unpackPaginatedResponse, withPagination } from "../utils/pagination";
 
 const emptyForm = {
   name: "",
@@ -24,6 +25,8 @@ const Departments = () => {
   const canManage = hasRole(["Super Admin"]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState(null);
   const [saving, setSaving] = useState(false);
   const [filters, setFilters] = useState({ search: "" });
   const [modalOpen, setModalOpen] = useState(false);
@@ -32,15 +35,19 @@ const Departments = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [detailModal, setDetailModal] = useState({ open: false, department: null, issues: [], requests: [] });
 
-  const loadDepartments = async (showLoader = true) => {
-    if (showLoader) setLoading(true);
+  const loadDepartments = async (showLoader = true, page = 1, append = false) => {
+    if (append) setLoadingMore(true);
+    else if (showLoader) setLoading(true);
     try {
-      const { data } = await api.get("/departments", { params: filters });
-      setDepartments(data);
+      const { data } = await api.get("/departments", { params: withPagination(filters, page) });
+      const { rows, pagination: nextPagination } = unpackPaginatedResponse(data);
+      setDepartments((current) => append ? [...current, ...rows] : rows);
+      setPagination(nextPagination);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      if (showLoader) setLoading(false);
+      if (append) setLoadingMore(false);
+      else if (showLoader) setLoading(false);
     }
   };
 
@@ -181,7 +188,15 @@ const Departments = () => {
       </div>
 
       <section className="panel overflow-hidden">
-        <DataTable columns={columns} data={departments} loading={loading} emptyTitle="No departments found" />
+        <DataTable
+          columns={columns}
+          data={departments}
+          loading={loading}
+          emptyTitle="No departments found"
+          pagination={pagination}
+          loadingMore={loadingMore}
+          onLoadMore={() => loadDepartments(false, (pagination?.page || 1) + 1, true)}
+        />
       </section>
 
       <Modal
@@ -209,7 +224,7 @@ const Departments = () => {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete department"
-        message={`Delete ${deleteTarget?.name}? Existing request and issue records will retain their audit data.`}
+        message="Are you sure you want to delete this?"
         confirmLabel="Delete"
         loading={saving}
         onClose={() => setDeleteTarget(null)}

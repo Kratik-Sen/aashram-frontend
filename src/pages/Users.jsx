@@ -10,6 +10,7 @@ import { useToast } from "../context/ToastContext";
 import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { roles, statusTone } from "../utils/constants";
 import { getErrorMessage, shortDate } from "../utils/formatters";
+import { unpackPaginatedResponse, withPagination } from "../utils/pagination";
 
 const emptyForm = {
   name: "",
@@ -25,6 +26,8 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState(null);
   const [saving, setSaving] = useState(false);
   const [filters, setFilters] = useState({ search: "", role: "", status: "" });
   const [modalOpen, setModalOpen] = useState(false);
@@ -32,19 +35,23 @@ const Users = () => {
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const loadData = async (showLoader = true) => {
-    if (showLoader) setLoading(true);
+  const loadData = async (showLoader = true, page = 1, append = false) => {
+    if (append) setLoadingMore(true);
+    else if (showLoader) setLoading(true);
     try {
       const [userRes, departmentRes] = await Promise.all([
-        api.get("/users", { params: filters }),
+        api.get("/users", { params: withPagination(filters, page) }),
         api.get("/departments")
       ]);
-      setUsers(userRes.data);
+      const { rows, pagination: nextPagination } = unpackPaginatedResponse(userRes.data);
+      setUsers((current) => append ? [...current, ...rows] : rows);
+      setPagination(nextPagination);
       setDepartments(departmentRes.data);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      if (showLoader) setLoading(false);
+      if (append) setLoadingMore(false);
+      else if (showLoader) setLoading(false);
     }
   };
 
@@ -178,7 +185,15 @@ const Users = () => {
       </div>
 
       <section className="panel overflow-hidden">
-        <DataTable columns={columns} data={users} loading={loading} emptyTitle="No users found" />
+        <DataTable
+          columns={columns}
+          data={users}
+          loading={loading}
+          emptyTitle="No users found"
+          pagination={pagination}
+          loadingMore={loadingMore}
+          onLoadMore={() => loadData(false, (pagination?.page || 1) + 1, true)}
+        />
       </section>
 
       <Modal
@@ -205,7 +220,7 @@ const Users = () => {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete user"
-        message={`Delete ${deleteTarget?.name}? This cannot be used for future logins.`}
+        message="Are you sure you want to delete this?"
         confirmLabel="Delete"
         loading={saving}
         onClose={() => setDeleteTarget(null)}

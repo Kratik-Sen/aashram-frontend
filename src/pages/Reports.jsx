@@ -9,6 +9,7 @@ import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { categories } from "../utils/constants";
 import { downloadCsv } from "../utils/csv";
 import { currency, getErrorMessage, number, shortDate } from "../utils/formatters";
+import { unpackPaginatedResponse, withPagination } from "../utils/pagination";
 
 const reportTypes = [
   { value: "stock", label: "Stock Report" },
@@ -29,6 +30,8 @@ const Reports = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState(null);
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
@@ -56,15 +59,19 @@ const Reports = () => {
     loadLookups();
   }, [showToast]);
 
-  const loadReport = async (showLoader = true) => {
-    if (showLoader) setLoading(true);
+  const loadReport = async (showLoader = true, page = 1, append = false) => {
+    if (append) setLoadingMore(true);
+    else if (showLoader) setLoading(true);
     try {
-      const { data } = await api.get(`/reports/${reportType}`, { params: filters });
-      setRows(data);
+      const { data } = await api.get(`/reports/${reportType}`, { params: withPagination(filters, page) });
+      const { rows: nextRows, pagination: nextPagination } = unpackPaginatedResponse(data);
+      setRows((current) => append ? [...current, ...nextRows] : nextRows);
+      setPagination(nextPagination);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      if (showLoader) setLoading(false);
+      if (append) setLoadingMore(false);
+      else if (showLoader) setLoading(false);
     }
   };
 
@@ -238,7 +245,16 @@ const Reports = () => {
         <div className="border-b border-slate-100 px-4 py-3">
           <h2 className="font-bold text-slate-900">{reportTypes.find((report) => report.value === reportType)?.label}</h2>
         </div>
-        <DataTable columns={columns} data={rows} loading={loading} emptyTitle="No report data found" emptyMessage="Run a report or adjust filters." />
+        <DataTable
+          columns={columns}
+          data={rows}
+          loading={loading}
+          emptyTitle="No report data found"
+          emptyMessage="Run a report or adjust filters."
+          pagination={pagination}
+          loadingMore={loadingMore}
+          onLoadMore={() => loadReport(false, (pagination?.page || 1) + 1, true)}
+        />
       </section>
     </div>
   );

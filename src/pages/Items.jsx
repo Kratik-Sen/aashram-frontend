@@ -11,6 +11,7 @@ import { useToast } from "../context/ToastContext";
 import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { categories, managerRoles, statusTone, units } from "../utils/constants";
 import { getErrorMessage, number, shortDate } from "../utils/formatters";
+import { unpackPaginatedResponse, withPagination } from "../utils/pagination";
 
 const emptyForm = {
   itemName: "",
@@ -30,6 +31,8 @@ const Items = () => {
   const canDelete = hasRole(["Super Admin"]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState(null);
   const [saving, setSaving] = useState(false);
   const [filters, setFilters] = useState({ search: "", category: "" });
   const [modalOpen, setModalOpen] = useState(false);
@@ -38,15 +41,19 @@ const Items = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [historyModal, setHistoryModal] = useState({ open: false, item: null, transactions: [] });
 
-  const loadItems = async (showLoader = true) => {
-    if (showLoader) setLoading(true);
+  const loadItems = async (showLoader = true, page = 1, append = false) => {
+    if (append) setLoadingMore(true);
+    else if (showLoader) setLoading(true);
     try {
-      const { data } = await api.get("/items", { params: filters });
-      setItems(data);
+      const { data } = await api.get("/items", { params: withPagination(filters, page) });
+      const { rows, pagination: nextPagination } = unpackPaginatedResponse(data);
+      setItems((current) => append ? [...current, ...rows] : rows);
+      setPagination(nextPagination);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      if (showLoader) setLoading(false);
+      if (append) setLoadingMore(false);
+      else if (showLoader) setLoading(false);
     }
   };
 
@@ -218,7 +225,16 @@ const Items = () => {
       </div>
 
       <section className="panel overflow-hidden">
-        <DataTable columns={columns} data={filteredItems} loading={loading} emptyTitle="No items found" emptyMessage="Create your first item or change the filters." />
+        <DataTable
+          columns={columns}
+          data={filteredItems}
+          loading={loading}
+          emptyTitle="No items found"
+          emptyMessage="Create your first item or change the filters."
+          pagination={pagination}
+          loadingMore={loadingMore}
+          onLoadMore={() => loadItems(false, (pagination?.page || 1) + 1, true)}
+        />
       </section>
 
       <Modal
@@ -251,7 +267,7 @@ const Items = () => {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete item"
-        message={`Delete ${deleteTarget?.itemName}? Stock transaction history is preserved separately, but this item will no longer be available.`}
+        message="Are you sure you want to delete this?"
         confirmLabel="Delete"
         loading={saving}
         onClose={() => setDeleteTarget(null)}

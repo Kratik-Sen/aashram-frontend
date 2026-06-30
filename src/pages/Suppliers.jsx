@@ -11,6 +11,7 @@ import { useToast } from "../context/ToastContext";
 import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { managerRoles, statusTone } from "../utils/constants";
 import { currency, getErrorMessage, number, shortDate } from "../utils/formatters";
+import { unpackPaginatedResponse, withPagination } from "../utils/pagination";
 
 const emptyForm = {
   supplierName: "",
@@ -28,6 +29,8 @@ const Suppliers = () => {
   const canDelete = hasRole(["Super Admin"]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState(null);
   const [saving, setSaving] = useState(false);
   const [filters, setFilters] = useState({ search: "" });
   const [modalOpen, setModalOpen] = useState(false);
@@ -36,15 +39,19 @@ const Suppliers = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [historyModal, setHistoryModal] = useState({ open: false, supplier: null, purchases: [] });
 
-  const loadSuppliers = async (showLoader = true) => {
-    if (showLoader) setLoading(true);
+  const loadSuppliers = async (showLoader = true, page = 1, append = false) => {
+    if (append) setLoadingMore(true);
+    else if (showLoader) setLoading(true);
     try {
-      const { data } = await api.get("/suppliers", { params: filters });
-      setSuppliers(data);
+      const { data } = await api.get("/suppliers", { params: withPagination(filters, page) });
+      const { rows, pagination: nextPagination } = unpackPaginatedResponse(data);
+      setSuppliers((current) => append ? [...current, ...rows] : rows);
+      setPagination(nextPagination);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      if (showLoader) setLoading(false);
+      if (append) setLoadingMore(false);
+      else if (showLoader) setLoading(false);
     }
   };
 
@@ -189,7 +196,15 @@ const Suppliers = () => {
       </div>
 
       <section className="panel overflow-hidden">
-        <DataTable columns={columns} data={suppliers} loading={loading} emptyTitle="No suppliers found" />
+        <DataTable
+          columns={columns}
+          data={suppliers}
+          loading={loading}
+          emptyTitle="No suppliers found"
+          pagination={pagination}
+          loadingMore={loadingMore}
+          onLoadMore={() => loadSuppliers(false, (pagination?.page || 1) + 1, true)}
+        />
       </section>
 
       <Modal
@@ -220,7 +235,7 @@ const Suppliers = () => {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete supplier"
-        message={`Delete ${deleteTarget?.supplierName}? Existing purchase records will keep their audit data.`}
+        message="Are you sure you want to delete this?"
         confirmLabel="Delete"
         loading={saving}
         onClose={() => setDeleteTarget(null)}

@@ -9,6 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import useRealtimeRefresh from "../hooks/useRealtimeRefresh";
 import { getErrorMessage, number, shortDate } from "../utils/formatters";
+import { unpackPaginatedResponse, withPagination } from "../utils/pagination";
 
 const emptyRequestForm = {
   itemId: "",
@@ -24,23 +25,30 @@ const IssuedByAdmin = () => {
   const [issues, setIssues] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [pagination, setPagination] = useState(null);
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyRequestForm);
 
-  const loadData = async (showLoader = true) => {
-    if (showLoader) setLoading(true);
+  const loadData = async (showLoader = true, page = 1, append = false) => {
+    if (append) setLoadingMore(true);
+    else if (showLoader) setLoading(true);
     try {
+      const issueParams = departmentId ? { departmentId } : {};
       const [issueRes, itemRes] = await Promise.all([
-        api.get("/issues", { params: departmentId ? { departmentId } : {} }),
+        api.get("/issues", { params: withPagination(issueParams, page) }),
         api.get("/items", { params: { status: "active" } })
       ]);
-      setIssues(issueRes.data);
+      const { rows, pagination: nextPagination } = unpackPaginatedResponse(issueRes.data);
+      setIssues((current) => append ? [...current, ...rows] : rows);
+      setPagination(nextPagination);
       setItems(itemRes.data);
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
-      if (showLoader) setLoading(false);
+      if (append) setLoadingMore(false);
+      else if (showLoader) setLoading(false);
     }
   };
 
@@ -116,7 +124,16 @@ const IssuedByAdmin = () => {
       </div>
 
       <section className="panel overflow-hidden">
-        <DataTable columns={columns} data={issues} loading={loading} emptyTitle="No issued items found" emptyMessage="Items issued from the admin stock issue page will appear here." />
+        <DataTable
+          columns={columns}
+          data={issues}
+          loading={loading}
+          emptyTitle="No issued items found"
+          emptyMessage="Items issued from the admin stock issue page will appear here."
+          pagination={pagination}
+          loadingMore={loadingMore}
+          onLoadMore={() => loadData(false, (pagination?.page || 1) + 1, true)}
+        />
       </section>
 
       <Modal
