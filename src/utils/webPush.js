@@ -22,12 +22,19 @@ const setWebPushPreference = (enabled) => {
   localStorage.setItem(PUSH_PREFERENCE_KEY, enabled ? "true" : "false");
 };
 
+const getExistingRegistration = () => navigator.serviceWorker.getRegistration();
+
+const registerServiceWorker = async () => {
+  await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  return navigator.serviceWorker.ready;
+};
+
 export const getWebPushStatus = async () => {
   if (!isWebPushSupported()) {
     return { supported: false, enabled: false, permission: "unsupported" };
   }
 
-  const registration = await navigator.serviceWorker.getRegistration("/sw.js");
+  const registration = await getExistingRegistration();
   const subscription = await registration?.pushManager.getSubscription();
 
   return {
@@ -52,7 +59,7 @@ export const enableWebPushNotifications = async () => {
     return false;
   }
 
-  const registration = await navigator.serviceWorker.register("/sw.js");
+  const registration = await registerServiceWorker();
   let subscription = await registration.pushManager.getSubscription();
 
   if (!subscription) {
@@ -71,7 +78,7 @@ export const disableWebPushNotifications = async () => {
   setWebPushPreference(false);
   if (!isWebPushSupported()) return false;
 
-  const registration = await navigator.serviceWorker.getRegistration("/sw.js");
+  const registration = await getExistingRegistration();
   const subscription = await registration?.pushManager.getSubscription();
   if (!subscription) return true;
 

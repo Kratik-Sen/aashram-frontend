@@ -48,16 +48,23 @@ const Navbar = ({ onMenu }) => {
   const toggleNotifications = async () => {
     setPushLoading(true);
     try {
-      const enabled = pushStatus.enabled
-        ? !(await disableWebPushNotifications())
-        : await enableWebPushNotifications();
-      const nextStatus = await getWebPushStatus();
-      const blocked = !enabled && nextStatus.permission === "denied";
+      if (pushStatus.enabled) {
+        await disableWebPushNotifications();
+        const nextStatus = await getWebPushStatus();
+        setPushStatus({ ...nextStatus, enabled: false });
+        showToast("Notifications disabled", "success");
+        return;
+      }
 
-      setPushStatus({ ...nextStatus, enabled });
+      const enabled = await enableWebPushNotifications();
+      const nextStatus = await getWebPushStatus();
+      const nextEnabled = enabled || nextStatus.enabled;
+      const blocked = !nextEnabled && nextStatus.permission === "denied";
+
+      setPushStatus({ ...nextStatus, enabled: nextEnabled });
       showToast(
-        enabled ? "Notifications enabled" : blocked ? "Notifications are blocked in your browser" : "Notifications disabled",
-        enabled || !blocked ? "success" : "error"
+        nextEnabled ? "Notifications enabled" : blocked ? "Notifications are blocked in your browser" : "Notifications could not be enabled",
+        nextEnabled ? "success" : "error"
       );
     } catch (error) {
       showToast("Could not update notifications", "error");
