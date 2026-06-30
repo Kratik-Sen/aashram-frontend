@@ -76,6 +76,9 @@ export const RealtimeProvider = ({ children }) => {
         });
         return next;
       });
+      if (event.message) {
+        showToast(event.message, "info");
+      }
       playNotification();
       showBrowserNotification(event).catch(() => {});
     });
