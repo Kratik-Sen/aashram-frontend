@@ -4,12 +4,15 @@ import { io } from "socket.io-client";
 import notificationSound from "../assets/notification.mp3";
 import { getSocketBaseUrl } from "../api/baseUrl";
 import { useAuth } from "./AuthContext";
+import { useToast } from "./ToastContext";
 import { eventTouchesAreas, getEventAreas, notificationAreasByPath } from "../utils/realtime";
+import { ensurePreferredWebPushNotifications } from "../utils/webPush";
 
 const RealtimeContext = createContext(null);
 
 export const RealtimeProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const { showToast } = useToast();
   const location = useLocation();
   const [lastEvent, setLastEvent] = useState(null);
   const [connected, setConnected] = useState(false);
@@ -57,6 +60,12 @@ export const RealtimeProvider = ({ children }) => {
       };
       const currentPath = locationRef.current;
 
+      if (event.area === "users" && event.action === "deleted" && event.userId === user._id) {
+        showToast("Your account was deleted. You have been logged out.", "error");
+        logout();
+        return;
+      }
+
       setLastEvent(event);
       setNotificationCounts((current) => {
         const next = { ...current };
@@ -71,7 +80,12 @@ export const RealtimeProvider = ({ children }) => {
     });
 
     return () => socket.disconnect();
-  }, [playNotification, user]);
+  }, [logout, playNotification, showToast, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    ensurePreferredWebPushNotifications().catch(() => {});
+  }, [user]);
 
   const value = useMemo(
     () => ({ connected, lastEvent, notificationCounts, clearNotifications }),
